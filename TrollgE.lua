@@ -827,49 +827,57 @@ mainTab.CreateToggle('Player ESP', false, function(state)
     ESP:SetEnabled(state)
     print('Player ESP:', state and 'ON' or 'OFF')
 end)
--- Settings Tab Content
-settingsTab.CreateSection('Options')
-settingsTab.CreateLabel('Settings will NOT be saved automatically.. for now :3')
-
-trollgetab.CreateSection('Farming')
 trollgetab.CreateToggle('TP To Chests', false, function(state)
     tpCollectActive = state
     local player = game.Players.LocalPlayer
+    local chestsContainer = game.Workspace:WaitForChild("chests")
+    
+    -- ใช้ตัวแปรนี้เก็บ Connection ของ ChildAdded Event
+    local collectionConnection 
 
     if not tpCollectActive then
+        -- *สำคัญ*: หยุดการเชื่อมต่ออีเวนต์เมื่อปิด Toggle
+        if collectionConnection then
+            collectionConnection:Disconnect()
+            collectionConnection = nil
+        end
+        -- คุณสามารถเพิ่มตรรกะหยุด Coroutine เก่าตรงนี้ได้ ถ้าต้องการให้มันหยุดเร็วขึ้น
         return
     end
 
-    if tpCollectLoop then
-        tpCollectLoop = nil
-    end
+    -- ฟังก์ชันสำหรับเก็บกล่องเดียว
+    local function collectChest(chestPart)
+        -- ใช้ task.spawn เพื่อให้การเก็บกล่องนี้ทำงานแบบ Asynchronous
+        task.spawn(function()
+            local character = player.Character
+            local hrp = character and character:FindFirstChild('HumanoidRootPart')
+            if not hrp then return end
 
-    tpCollectLoop = coroutine.create(function()
-    while tpCollectActive do
-        local character = player.Character
-        local hrp = character and character:FindFirstChild('HumanoidRootPart')
-        if not hrp then
-            break
-        end
-
-        -- ดึงกล่องใหม่ทุกรอบ
-        local chests = game.Workspace.chests:GetChildren()
-        for _, chest in ipairs(chests) do
-            if not tpCollectActive then
-                break
-            end
-            if chest:IsA('BasePart') and chest:FindFirstChild('ProximityPrompt') then
-                hrp.CFrame = chest.CFrame + Vector3.new(0, 2, 0)
-
+            local prompt = chestPart:FindFirstChild('ProximityPrompt')
+            if chestPart:IsA('BasePart') and prompt then
+                -- วาร์ป
+                hrp.CFrame = chestPart.CFrame + Vector3.new(0, 2, 0)
+                
+                -- พยายามเก็บจนกว่ากล่องจะหายไป
                 repeat
-                    fireproximityprompt(chest.ProximityPrompt, true)
-                    task.wait(0.1)
-                until not chest.Parent or not tpCollectActive
+                    fireproximityprompt(prompt, true)
+                    task.wait() -- yield
+                until not chestPart.Parent or not tpCollectActive
             end
-        end
-
-        task.wait(2) -- รอ 2 วินาที ก่อนวนรอบใหม่
+        end)
     end
+    
+    -- 1. เก็บกล่องที่มีอยู่แล้วทั้งหมด (Initial Sweep)
+    for _, chest in ipairs(chestsContainer:GetChildren()) do
+        collectChest(chest)
+    end
+
+    -- 2. ตั้งค่าการตอบสนองต่อกล่องใหม่ (Event-driven)
+    -- เมื่อมี Child ใหม่เพิ่มเข้ามาใน 'chests' จะเรียก collectChest ทันที
+    collectionConnection = chestsContainer.ChildAdded:Connect(collectChest)
+
+    -- *หมายเหตุ:* คุณไม่จำเป็นต้องมี Coroutine หรือ While-loop ในโค้ดใหม่นี้
+    -- เพราะ ChildAdded Event จัดการการตอบสนองต่อกล่องใหม่ให้คุณแล้ว
 end)
 trollgetab.CreateToggle('TP To Gold/other', false, function(state)
     tpCollectActive = state
@@ -917,9 +925,11 @@ trollgetab.CreateToggle('TP To Gold/other', false, function(state)
     end)
     coroutine.resume(tpCollectLoop)
 end)
-trollgetab.CreateToggle('Auto Collect Nearby Items', false, function(state)
+trollgetab.CreateToggle('Auto Collect Nearby Chests', false, function(state)
     autocollectActive = state
     local player = game.Players.LocalPlayer
+    local hrp = player.Character
+        and player.Character:FindFirstChild('HumanoidRootPart')
 
     if autocollectLoop then
         autocollectLoop:Disconnect()
@@ -927,37 +937,36 @@ trollgetab.CreateToggle('Auto Collect Nearby Items', false, function(state)
     end
 
     if autocollectActive then
-        autocollectLoop = game:GetService('RunService').Heartbeat:Connect(function()
-            if not autocollectActive then
-                return
-            end
+        autocollectLoop = game
+            :GetService('RunService').Heartbeat
+            :Connect(function()
+                if not autocollectActive then
+                    return
+                end
 
-            local character = player.Character
-            if not character or not character:FindFirstChild('HumanoidRootPart') then
-                return
-            end
+                if
+                    not player.Character
+                    or not player.Character:FindFirstChild('HumanoidRootPart')
+                then
+                    return
+                end
+                hrp = player.Character.HumanoidRootPart
 
-            local hrp = character.HumanoidRootPart
-
-            -- วนเก็บทุกอย่างใน Workspace.Items
-            for _, item in pairs(game.Workspace.Items:GetChildren()) do
-                -- หา ProximityPrompt ที่อยู่ข้างใน (ไม่ว่าจะลึกแค่ไหน)
-                local prompt = item:FindFirstChildWhichIsA('ProximityPrompt', true)
-                if prompt then
-                    -- หา position (รองรับทั้ง Model และ BasePart)
-                    local pos = item:IsA('Model') and item:GetPivot().Position or item.Position
-                    local distance = (pos - hrp.Position).Magnitude
-
-                    -- ถ้าอยู่ในระยะ 22 stud ให้กดเก็บ
-                    if distance < 22 then
-                        fireproximityprompt(prompt)
+                for _, chest in pairs(game.Workspace.chests:GetChildren()) do
+                    if
+                        chest:IsA('BasePart')
+                        and chest:FindFirstChild('ProximityPrompt')
+                    then
+                        local distance =
+                            (chest.Position - hrp.Position).Magnitude
+                        if distance < 22 then
+                            fireproximityprompt(chest.ProximityPrompt)
+                        end
                     end
                 end
-            end
-        end)
+            end)
     end
 end)
-
 trollgetab.CreateToggle('Auto Collect Nearby Gold/other', false, function(state)
     autocollectActive = state
     local player = game.Players.LocalPlayer
@@ -992,7 +1001,7 @@ trollgetab.CreateToggle('Auto Collect Nearby Gold/other', false, function(state)
                     then
                         local distance =
                             (gold.Position - hrp.Position).Magnitude
-                        if distance < 100000000 then
+                        if distance < 22 then
                             fireproximityprompt(gold.ProximityPrompt)
                         end
                     end
