@@ -951,7 +951,7 @@ trollgetab.CreateToggle('Auto Collect Nearby Chests', false, function(state)
                 end
                 hrp = player.Character.HumanoidRootPart
 
-                for _, chest in pairs(game.Workspace.chests:GetChildren()) do
+                for _, chest in pairs(game.Workspace.Items:GetChildren()) do
                     if
                         chest:IsA('BasePart')
                         and chest:FindFirstChild('ProximityPrompt')
