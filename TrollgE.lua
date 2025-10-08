@@ -924,15 +924,6 @@ trollgetab.CreateToggle('TP To Gold/other', false, function(state)
     end)
     coroutine.resume(tpCollectLoop)
 end)
---// Toggle + Slider สำหรับ Auto Collect
-local collectDistance = 22 -- ค่าระยะเริ่มต้น
-
--- สร้าง Slider ให้ปรับระยะได้
-trollgetab.CreateSlider('Collect Distance', 5, 50, 22, function(value)
-    collectDistance = value
-end)
-
--- สร้าง Toggle เปิด/ปิดการเก็บ
 trollgetab.CreateToggle('Auto Collect Nearby Items', false, function(state)
     autocollectActive = state
     local player = game.Players.LocalPlayer
@@ -955,15 +946,17 @@ trollgetab.CreateToggle('Auto Collect Nearby Items', false, function(state)
 
             local hrp = character.HumanoidRootPart
 
-            -- วนลูปของทั้งหมดใน Workspace.Items
+            -- วนเก็บทุกอย่างใน Workspace.Items
             for _, item in pairs(game.Workspace.Items:GetChildren()) do
+                -- หา ProximityPrompt ที่อยู่ข้างใน (ไม่ว่าจะลึกแค่ไหน)
                 local prompt = item:FindFirstChildWhichIsA('ProximityPrompt', true)
                 if prompt then
+                    -- หา position (รองรับทั้ง Model และ BasePart)
                     local pos = item:IsA('Model') and item:GetPivot().Position or item.Position
                     local distance = (pos - hrp.Position).Magnitude
 
-                    -- ใช้ค่าจาก slider แทนค่า fix
-                    if distance < collectDistance then
+                    -- ถ้าอยู่ในระยะ 22 stud ให้กดเก็บ
+                    if distance < 999999999999 then
                         fireproximityprompt(prompt)
                     end
                 end
@@ -971,6 +964,7 @@ trollgetab.CreateToggle('Auto Collect Nearby Items', false, function(state)
         end)
     end
 end)
+
 trollgetab.CreateToggle('Auto Collect Nearby Gold/other', false, function(state)
     autocollectActive = state
     local player = game.Players.LocalPlayer
