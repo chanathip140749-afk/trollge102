@@ -1005,7 +1005,7 @@ trollgetab.CreateToggle('Auto Collect Nearby Gold/other', false, function(state)
                     then
                         local distance =
                             (gold.Position - hrp.Position).Magnitude
-                        if distance < 22 then
+                        if distance < 100000000 then
                             fireproximityprompt(gold.ProximityPrompt)
                         end
                     end
