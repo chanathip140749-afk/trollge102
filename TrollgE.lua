@@ -877,3 +877,234 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
 
     coroutine.resume(tpCollectLoop)
 end)
+trollgetab.CreateToggle('TP To Gold/other', false, function(state)
+    tpCollectActive = state
+    local player = game.Players.LocalPlayer
+    local hrp = player.Character
+        and player.Character:FindFirstChild('HumanoidRootPart')
+
+    if not tpCollectActive then
+        return -- stop here if turned off
+    end
+
+    if tpCollectLoop then
+        tpCollectLoop = nil -- Reset old coroutine
+    end
+
+    tpCollectLoop = coroutine.create(function()
+        while tpCollectActive do
+            if
+                not player.Character
+                or not player.Character:FindFirstChild('HumanoidRootPart')
+            then
+                break
+            end
+
+            hrp = player.Character.HumanoidRootPart
+
+            local gold = game.Workspace.other:GetChildren()
+            for _, coin in ipairs(gold) do
+                if not tpCollectActive then
+                    break
+                end
+                if
+                    coin:IsA('BasePart')
+                    and coin:FindFirstChild('ProximityPrompt')
+                then
+                    hrp.CFrame = coin.CFrame + Vector3.new(0, 2, 0)
+                    task.wait(0.15)
+                    fireproximityprompt(coin.ProximityPrompt)
+                    task.wait(0.1)
+                end
+            end
+
+            task.wait(0.5)
+        end
+    end)
+    coroutine.resume(tpCollectLoop)
+end)
+trollgetab.CreateToggle('Auto Collect Nearby Chests', false, function(state)
+    autocollectActive = state
+    local player = game.Players.LocalPlayer
+    local hrp = player.Character
+        and player.Character:FindFirstChild('HumanoidRootPart')
+
+    if autocollectLoop then
+        autocollectLoop:Disconnect()
+        autocollectLoop = nil
+    end
+
+    if autocollectActive then
+        autocollectLoop = game
+            :GetService('RunService').Heartbeat
+            :Connect(function()
+                if not autocollectActive then
+                    return
+                end
+
+                if
+                    not player.Character
+                    or not player.Character:FindFirstChild('HumanoidRootPart')
+                then
+                    return
+                end
+                hrp = player.Character.HumanoidRootPart
+
+                for _, chest in pairs(game.Workspace.chests:GetChildren()) do
+                    if
+                        chest:IsA('BasePart')
+                        and chest:FindFirstChild('ProximityPrompt')
+                    then
+                        local distance =
+                            (chest.Position - hrp.Position).Magnitude
+                        if distance < 22 then
+                            fireproximityprompt(chest.ProximityPrompt)
+                        end
+                    end
+                end
+            end)
+    end
+end)
+trollgetab.CreateToggle('Auto Collect Nearby Gold/other', false, function(state)
+    autocollectActive = state
+    local player = game.Players.LocalPlayer
+    local hrp = player.Character
+        and player.Character:FindFirstChild('HumanoidRootPart')
+
+    if autocollectLoop then
+        autocollectLoop:Disconnect()
+        autocollectLoop = nil
+    end
+
+    if autocollectActive then
+        autocollectLoop = game
+            :GetService('RunService').Heartbeat
+            :Connect(function()
+                if not autocollectActive then
+                    return
+                end
+
+                if
+                    not player.Character
+                    or not player.Character:FindFirstChild('HumanoidRootPart')
+                then
+                    return
+                end
+                hrp = player.Character.HumanoidRootPart
+
+                for _, gold in pairs(game.Workspace.other:GetChildren()) do
+                    if
+                        gold:IsA('BasePart')
+                        and gold:FindFirstChild('ProximityPrompt')
+                    then
+                        local distance =
+                            (gold.Position - hrp.Position).Magnitude
+                        if distance < 22 then
+                            fireproximityprompt(gold.ProximityPrompt)
+                        end
+                    end
+                end
+            end)
+    end
+end)
+trollgetab.CreateSection('misc functions')
+trollgetab.CreateButton('Grab All Dropped "Tools"', function()
+    for i, v in pairs(game.Workspace:GetChildren()) do
+        if v:IsA('Tool') and v:FindFirstChild('Handle') then
+            wait()
+            v:FindFirstChild('Handle').CFrame =
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+        end
+    end
+end)
+local toolNameInput = trollgetab.CreateTextbox(
+    'Tool Name:',
+    'ToolNameHere',
+    function(inputText)
+        -- This callback will be used when the text is submitted
+        -- We'll store the input text for the toggle to use
+        autoEquipToolName = inputText
+    end
+)
+
+trollgetab.CreateToggle('Auto Equip For Bank', false, function(state)
+    autoBankEquipActive = state
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local inventory = player:FindFirstChild('Backpack')
+
+    if not inventory then
+        warn('Backpack not found!')
+        return
+    end
+
+    -- Helper function to find and equip one item
+    local function equipNext()
+        if not autoBankEquipActive then
+            return
+        end
+
+        -- Ensure we have a valid character reference
+        character = player.Character or player.CharacterAdded:Wait()
+        if not character then
+            return
+        end
+
+        -- Check if already holding something
+        local tool = character:FindFirstChildOfClass('Tool')
+        if tool then
+            return
+        end
+
+        -- Use the stored tool name or the current textbox value
+        local targetToolName = autoEquipToolName or toolNameInput.Text
+        if not targetToolName or targetToolName == '' then
+            warn('No tool name specified for auto-equip!')
+            return
+        end
+
+        -- Search backpack for matching tool
+        for _, item in pairs(inventory:GetChildren()) do
+            if
+                item:IsA('Tool')
+                and item.Name:lower() == targetToolName:lower()
+            then
+                item.Parent = character
+                break
+            end
+        end
+    end
+
+    -- Cleanup previous connection
+    if autoBankEquipLoop then
+        autoBankEquipLoop:Disconnect()
+        autoBankEquipLoop = nil
+    end
+
+    if autoBankEquipActive then
+        -- Listen for when a tool is removed (banked)
+        autoBankEquipLoop = character.ChildRemoved:Connect(function(child)
+            if not autoBankEquipActive then
+                return
+            end
+            if child:IsA('Tool') then
+                local targetToolName = autoEquipToolName or toolNameInput.Text
+                if child.Name:lower() == targetToolName:lower() then
+                    task.wait(0.2) -- Small delay before re-equipping
+                    equipNext()
+                end
+            end
+        end)
+
+        -- Equip first one immediately
+        equipNext()
+    end
+end)
+trollgetab.CreateDropdown('Kill NPC', getOwnedNPCNames, function(selectedName)
+    local npc = ownedNPCs[selectedName]
+    if npc and npc:FindFirstChild('Humanoid') then
+        npc.Humanoid.Health = 0
+    end
+end)
+--small little trollge origin update!!! killing NPCs only works if they're close enough / you're owner of their "parts"
+--LIKE AND SUBSCRIBE!!!! HAVE A GOOD ONE
