@@ -871,7 +871,7 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
                 end
             end
 
-            task.wait(3) -- quick cd
+            task.wait(10) -- quick cd
         end
     end)
 
