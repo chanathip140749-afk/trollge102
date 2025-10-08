@@ -866,7 +866,7 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
 
                     repeat
                         fireproximityprompt(chest.ProximityPrompt, true)
-                        task.wait() -- yield
+                        task.wait(2) -- yield
                     until not chest.Parent or not tpCollectActive
                 end
             end
