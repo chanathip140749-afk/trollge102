@@ -924,11 +924,9 @@ trollgetab.CreateToggle('TP To Gold/other', false, function(state)
     end)
     coroutine.resume(tpCollectLoop)
 end)
-trollgetab.CreateToggle('Auto Collect Nearby Chests', false, function(state)
+trollgetab.CreateToggle('Auto Collect Nearby Items', false, function(state)
     autocollectActive = state
     local player = game.Players.LocalPlayer
-    local hrp = player.Character
-        and player.Character:FindFirstChild('HumanoidRootPart')
 
     if autocollectLoop then
         autocollectLoop:Disconnect()
@@ -936,34 +934,34 @@ trollgetab.CreateToggle('Auto Collect Nearby Chests', false, function(state)
     end
 
     if autocollectActive then
-        autocollectLoop = game
-            :GetService('RunService').Heartbeat
-            :Connect(function()
-                if not autocollectActive then
-                    return
-                end
+        autocollectLoop = game:GetService('RunService').Heartbeat:Connect(function()
+            if not autocollectActive then
+                return
+            end
 
-                if
-                    not player.Character
-                    or not player.Character:FindFirstChild('HumanoidRootPart')
-                then
-                    return
-                end
-                hrp = player.Character.HumanoidRootPart
+            local character = player.Character
+            if not character or not character:FindFirstChild('HumanoidRootPart') then
+                return
+            end
 
-                for _, chest in pairs(game.Workspace.Items:GetChildren()) do
-                    if
-                        chest:IsA('BasePart')
-                        and chest:FindFirstChild('ProximityPrompt')
-                    then
-                        local distance =
-                            (chest.Position - hrp.Position).Magnitude
-                        if distance < 22 then
-                            fireproximityprompt(chest.ProximityPrompt)
-                        end
+            local hrp = character.HumanoidRootPart
+
+            -- วนเก็บทุกอย่างใน Workspace.Items
+            for _, item in pairs(game.Workspace.Items:GetChildren()) do
+                -- หา ProximityPrompt ที่อยู่ข้างใน (ไม่ว่าจะลึกแค่ไหน)
+                local prompt = item:FindFirstChildWhichIsA('ProximityPrompt', true)
+                if prompt then
+                    -- หา position (รองรับทั้ง Model และ BasePart)
+                    local pos = item:IsA('Model') and item:GetPivot().Position or item.Position
+                    local distance = (pos - hrp.Position).Magnitude
+
+                    -- ถ้าอยู่ในระยะ 22 stud ให้กดเก็บ
+                    if distance < 22 then
+                        fireproximityprompt(prompt)
                     end
                 end
-            end)
+            end
+        end)
     end
 end)
 trollgetab.CreateToggle('Auto Collect Nearby Gold/other', false, function(state)
