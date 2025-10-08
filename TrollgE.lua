@@ -827,58 +827,48 @@ mainTab.CreateToggle('Player ESP', false, function(state)
     ESP:SetEnabled(state)
     print('Player ESP:', state and 'ON' or 'OFF')
 end)
+-- Settings Tab Content
+settingsTab.CreateSection('Options')
+settingsTab.CreateLabel('Settings will NOT be saved automatically.. for now :3')
+
+trollgetab.CreateSection('Farming')
 trollgetab.CreateToggle('TP To Chests', false, function(state)
     tpCollectActive = state
     local player = game.Players.LocalPlayer
-    local chestsContainer = game.Workspace:WaitForChild("chests")
-    
-    -- ใช้ตัวแปรนี้เก็บ Connection ของ ChildAdded Event
-    local collectionConnection 
 
     if not tpCollectActive then
-        -- *สำคัญ*: หยุดการเชื่อมต่ออีเวนต์เมื่อปิด Toggle
-        if collectionConnection then
-            collectionConnection:Disconnect()
-            collectionConnection = nil
-        end
-        -- คุณสามารถเพิ่มตรรกะหยุด Coroutine เก่าตรงนี้ได้ ถ้าต้องการให้มันหยุดเร็วขึ้น
         return
     end
 
-    -- ฟังก์ชันสำหรับเก็บกล่องเดียว
-    local function collectChest(chestPart)
-        -- ใช้ task.spawn เพื่อให้การเก็บกล่องนี้ทำงานแบบ Asynchronous
-        task.spawn(function()
-            local character = player.Character
-            local hrp = character and character:FindFirstChild('HumanoidRootPart')
-            if not hrp then return end
+    if tpCollectLoop then
+        tpCollectLoop = nil
+    end
 
-            local prompt = chestPart:FindFirstChild('ProximityPrompt')
-            if chestPart:IsA('BasePart') and prompt then
-                -- วาร์ป
-                hrp.CFrame = chestPart.CFrame + Vector3.new(0, 2, 0)
-                
-                -- พยายามเก็บจนกว่ากล่องจะหายไป
+    tpCollectLoop = coroutine.create(function()
+    while tpCollectActive do
+        local character = player.Character
+        local hrp = character and character:FindFirstChild('HumanoidRootPart')
+        if not hrp then break end
+
+        -- อัปเดตรายการกล่องทุกครั้ง
+        local chests = game.Workspace.chests:GetChildren()
+        for _, chest in ipairs(chests) do
+            if not tpCollectActive then break end
+            if chest:IsA('BasePart') and chest:FindFirstChild('ProximityPrompt') then
+                hrp.CFrame = chest.CFrame + Vector3.new(0, 2, 0)
+
                 repeat
-                    fireproximityprompt(prompt, true)
-                    task.wait() -- yield
-                until not chestPart.Parent or not tpCollectActive
+                    fireproximityprompt(chest.ProximityPrompt, true)
+                    task.wait(0.1)
+                until not chest.Parent or not tpCollectActive
             end
-        end)
-    end
-    
-    -- 1. เก็บกล่องที่มีอยู่แล้วทั้งหมด (Initial Sweep)
-    for _, chest in ipairs(chestsContainer:GetChildren()) do
-        collectChest(chest)
-    end
+            task.wait(0.05) -- ใส่ delay เล็กๆ ป้องกัน lag
+        end
 
-    -- 2. ตั้งค่าการตอบสนองต่อกล่องใหม่ (Event-driven)
-    -- เมื่อมี Child ใหม่เพิ่มเข้ามาใน 'chests' จะเรียก collectChest ทันที
-    collectionConnection = chestsContainer.ChildAdded:Connect(collectChest)
-
-    -- *หมายเหตุ:* คุณไม่จำเป็นต้องมี Coroutine หรือ While-loop ในโค้ดใหม่นี้
-    -- เพราะ ChildAdded Event จัดการการตอบสนองต่อกล่องใหม่ให้คุณแล้ว
+        task.wait(0.2) -- cooldown ระหว่างรอบ while
+    end
 end)
+
 trollgetab.CreateToggle('TP To Gold/other', false, function(state)
     tpCollectActive = state
     local player = game.Players.LocalPlayer
