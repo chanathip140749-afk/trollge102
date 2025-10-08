@@ -956,7 +956,7 @@ trollgetab.CreateToggle('Auto Collect Nearby Items', false, function(state)
                     local distance = (pos - hrp.Position).Magnitude
 
                     -- ถ้าอยู่ในระยะ 22 stud ให้กดเก็บ
-                    if distance < 999999999999 then
+                    if distance < 22 then
                         fireproximityprompt(prompt)
                     end
                 end
