@@ -845,40 +845,32 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
     end
 
     tpCollectLoop = coroutine.create(function()
-        while tpCollectActive do
-            local character = player.Character
-            local hrp = character
-                and character:FindFirstChild('HumanoidRootPart')
-            if not hrp then
+    while tpCollectActive do
+        local character = player.Character
+        local hrp = character and character:FindFirstChild('HumanoidRootPart')
+        if not hrp then
+            break
+        end
+
+        -- ดึงกล่องใหม่ทุกรอบ
+        local chests = game.Workspace.chests:GetChildren()
+        for _, chest in ipairs(chests) do
+            if not tpCollectActive then
                 break
             end
+            if chest:IsA('BasePart') and chest:FindFirstChild('ProximityPrompt') then
+                hrp.CFrame = chest.CFrame + Vector3.new(0, 2, 0)
 
-            local chests = game.Workspace.Items:GetChildren()
-            for _, chest in ipairs(chests) do
-                if not tpCollectActive then
-                    break
-                end
-                if
-                    chest:IsA('BasePart')
-                    and chest:FindFirstChild('ProximityPrompt')
-                then
-                    hrp.CFrame = chest.CFrame + Vector3.new(0, 2, 0)
-
-                    repeat
-                        fireproximityprompt(chest.ProximityPrompt, true)
-                        task.wait(0.1) -- yield
-                    until not chest.Parent or not tpCollectActive
-                            task.wait(2)
-                end
+                repeat
+                    fireproximityprompt(chest.ProximityPrompt, true)
+                    task.wait(0.1)
+                until not chest.Parent or not tpCollectActive
             end
-
-            task.wait(2) -- quick cd
         end
-    end)
 
-    coroutine.resume(tpCollectLoop)
+        task.wait(2) -- รอ 2 วินาที ก่อนวนรอบใหม่
+    end
 end)
-
 trollgetab.CreateToggle('TP To Gold/other', false, function(state)
     tpCollectActive = state
     local player = game.Players.LocalPlayer
