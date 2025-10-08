@@ -877,6 +877,7 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
 
     coroutine.resume(tpCollectLoop)
 end)
+
 trollgetab.CreateToggle('TP To Gold/other', false, function(state)
     tpCollectActive = state
     local player = game.Players.LocalPlayer
