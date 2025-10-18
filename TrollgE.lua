@@ -845,28 +845,37 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
     end
 
     tpCollectLoop = coroutine.create(function()
-    while tpCollectActive do
-        local character = player.Character
-        local hrp = character and character:FindFirstChild('HumanoidRootPart')
-        if not hrp then break end
-
-        -- อัปเดตรายการกล่องทุกครั้ง
-        local chests = game.Workspace.MoneyBags:GetChildren()
-        for _, chest in ipairs(chests) do
-            if not tpCollectActive then break end
-            if chest:IsA('BasePart') and chest:FindFirstChild('ProximityPrompt') then
-                hrp.CFrame = chest.CFrame + Vector3.new(0, 2, 0)
-
-                repeat
-                    fireproximityprompt(chest.ProximityPrompt, true)
-                    task.wait(0.1)
-                until not chest.Parent or not tpCollectActive
+        while tpCollectActive do
+            local character = player.Character
+            local hrp = character
+                and character:FindFirstChild('HumanoidRootPart')
+            if not hrp then
+                break
             end
-            task.wait(0.05) -- ใส่ delay เล็กๆ ป้องกัน lag
-        end
 
-        task.wait() -- cooldown ระหว่างรอบ while
-    end
+            local chests = game.Workspace.chests:GetChildren()
+            for _, chest in ipairs(chests) do
+                if not tpCollectActive then
+                    break
+                end
+                if
+                    chest:IsA('BasePart')
+                    and chest:FindFirstChild('ProximityPrompt')
+                then
+                    hrp.CFrame = chest.CFrame + Vector3.new(0, 2, 0)
+
+                    repeat
+                        fireproximityprompt(chest.ProximityPrompt, true)
+                        task.wait() -- yield
+                    until not chest.Parent or not tpCollectActive
+                end
+            end
+
+            task.wait(0.1) -- quick cd
+        end
+    end)
+
+    coroutine.resume(tpCollectLoop)
 end)
 
 trollgetab.CreateToggle('TP To Gold/other', false, function(state)
