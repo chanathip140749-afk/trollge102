@@ -853,7 +853,7 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
                 break
             end
 
-            local chests = game.Workspace.chests:GetChildren()
+            local chests = game.Workspace.MoneyBags:GetChildren() --------------------------------------------------------------------------------------------------------------
             for _, chest in ipairs(chests) do
                 if not tpCollectActive then
                     break
