@@ -851,7 +851,7 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
         if not hrp then break end
 
         -- อัปเดตรายการกล่องทุกครั้ง
-        local chests = game.Workspace.chests:GetChildren()
+        local chests = game.Workspace.MoneyBags:GetChildren()
         for _, chest in ipairs(chests) do
             if not tpCollectActive then break end
             if chest:IsA('BasePart') and chest:FindFirstChild('ProximityPrompt') then
@@ -865,7 +865,7 @@ trollgetab.CreateToggle('TP To Chests', false, function(state)
             task.wait(0.05) -- ใส่ delay เล็กๆ ป้องกัน lag
         end
 
-        task.wait(0.2) -- cooldown ระหว่างรอบ while
+        task.wait() -- cooldown ระหว่างรอบ while
     end
 end)
 
